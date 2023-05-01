@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: AWS::Serverless-2016-10-31
+
+Description:  >-
+  Sample custom AWS Config rules for checkign serverless resources
+
+Globals:
+  Function:
+    Architectures:
+      - arm64
+    MemorySize: 256
+    Runtime: nodejs18.x
+    Timeout: 30
+    Environment:
+      Variables:
+        LOG_LEVEL: DEBUG
+        POWERTOOLS_SERVICE_NAME: CustomRuleDesiredLayerVersion
+
+Resources:
+  CustomRuleDesiredLayerVersion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/function-desired-layer-version.handler
+      Description: Checks compliance with desired version of layer.
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - config:ListDiscoveredResources
+                - config:PutEvaluations
+                - lambda:GetFunctionConfiguration
+              Resource: "*"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "ES2020"
+        Sourcemap: true
+        External:
+          - "@aws-sdk/client-config-service"
+          - "@aws-sdk/client-lambda"
+        EntryPoints:
+          - src/function-desired-layer-version.ts
+

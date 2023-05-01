@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: AWS::Serverless-2016-10-31
+
+Description:  >-
+  Sample custom AWS Config rules for checkign serverless resources
+
+Resources:
+  # Our customer config rule defined as a Lambda function
+  CustomRuleDesiredLayerVersion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ../src/function-desired-layer-version.handler
+      Description: Checks compliance with desired version of layer.
+      Architectures:
+      - arm64
+      MemorySize: 256
+      Runtime: nodejs18.x
+      Timeout: 30
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - config:ListDiscoveredResources
+                - config:PutEvaluations
+                - lambda:GetFunctionConfiguration
+              Resource: "*"
+      Environment:
+        Variables:
+          LOG_LEVEL: DEBUG
+          POWERTOOLS_SERVICE_NAME: CustomRuleDesiredLayerVersion
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "ES2020"
+        Sourcemap: true
+        External:
+          - "@aws-sdk/client-config-service"
+          - "@aws-sdk/client-lambda"
+        EntryPoints:
+          - ../src/function-desired-layer-version.ts
+
+  # Allow Config to invoke the rule function
+  ConfigPermissionToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CustomRuleDesiredLayerVersion
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      # We could narrow this permission further by adding SourceArn after initial creation, else circular
+      # SourceArn: !GetAtt DesiredLayerVersionConfigRule.Arn
+
+  # Instantiate the config rule
+  DesiredLayerVersionConfigRule:
+    DependsOn: ConfigPermissionToInvokeLambda
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: aws-lambda-desired-layer-version
+      Description: Checks whether an AWS Lambda function uses the desired version of a an AWS Lambda Layer.
+      InputParameters: !Sub |
+        { "requiredLayerArns": "arn:aws:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:31" }
+      MaximumExecutionFrequency: TwentyFour_Hours
+      Scope:
+        ComplianceResourceTypes:
+          - "AWS::Lambda::Function" # Rule is only applicable for Lambda functions
+      Source:
+        Owner: CUSTOM_LAMBDA
+        SourceDetails:
+          - EventSource: aws.config
+            MaximumExecutionFrequency: TwentyFour_Hours
+            MessageType: ScheduledNotification
+        SourceIdentifier: !GetAtt CustomRuleDesiredLayerVersion.Arn
+
+  # Sample function configured with desired layers and versions
+  GoodLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Test function
+      Architectures:
+      - arm64
+      Runtime: python3.10
+      Handler: index.handler
+      InlineCode: |
+        def handler(event, context):
+          print("Hello, world!")
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:31
+
+  # Sample function without the desired layer
+  BadLambdaFunction1:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Test function
+      Architectures:
+      - arm64
+      Runtime: python3.10
+      Handler: index.handler
+      InlineCode: |
+        def handler(event, context):
+          print("Hello, world!")
+  
+  # Sample function with the wrong version of the desired layer
+  BadLambdaFunction2:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Test function
+      Architectures:
+      - arm64
+      Runtime: python3.10
+      Handler: index.handler
+      InlineCode: |
+        def handler(event, context):
+          print("Hello, world!")
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:30
