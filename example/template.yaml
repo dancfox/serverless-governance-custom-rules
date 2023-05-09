@@ -6,7 +6,7 @@ Description:  >-
   Sample custom AWS Config rules for checkign serverless resources
 
 Resources:
-  # Our customer config rule defined as a Lambda function
+  ## Custom rule for desired layer version
   CustomRuleDesiredLayerVersion:
     Type: AWS::Serverless::Function
     Properties:
@@ -43,7 +43,7 @@ Resources:
           - ../src/function-desired-layer-version.ts
 
   # Allow Config to invoke the rule function
-  ConfigPermissionToInvokeLambda:
+  ConfigPermissionToInvokeCustomRuleDesiredLayerVersion:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
@@ -55,7 +55,7 @@ Resources:
 
   # Instantiate the config rule
   DesiredLayerVersionConfigRule:
-    DependsOn: ConfigPermissionToInvokeLambda
+    DependsOn: ConfigPermissionToInvokeCustomRuleDesiredLayerVersion
     Type: AWS::Config::ConfigRule
     Properties:
       ConfigRuleName: aws-lambda-desired-layer-version
@@ -73,6 +73,70 @@ Resources:
             MaximumExecutionFrequency: TwentyFour_Hours
             MessageType: ScheduledNotification
         SourceIdentifier: !GetAtt CustomRuleDesiredLayerVersion.Arn
+
+  ## Custom rule for no deprecated runtimes
+  CustomRuleNoDeprecatedRuntimes:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ../src/function-no-deprecated-runtimes.handler
+      Description: Checks compliance with not using deprecated runtimes.
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Runtime: nodejs18.x
+      Timeout: 30
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - config:ListDiscoveredResources
+                - config:PutEvaluations
+                - lambda:GetFunctionConfiguration
+              Resource: "*"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "ES2020"
+        Sourcemap: true
+        External:
+          - "@aws-sdk/client-config-service"
+          - "@aws-sdk/client-lambda"
+        EntryPoints:
+          - ../src/function-no-deprecated-runtimes.ts
+
+  # Allow Config to invoke the rule function
+  ConfigPermissionToInvokeCustomRuleNoDeprecatedRuntimes:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CustomRuleNoDeprecatedRuntimes
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+
+  # Instantiate the config rule
+  NoDeprecatedRuntimeConfigRule:
+    DependsOn: ConfigPermissionToInvokeCustomRuleNoDeprecatedRuntimes
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: aws-lambda-no-deprecated-runtimes-allowed
+      Description: Identifies Lambda functions that use deprecated Lambda runtimes or those identified by input paramters.
+      InputParameters: !Sub |
+        { "otherDeprecatedRuntimes": "nodejs12.x" }
+      MaximumExecutionFrequency: TwentyFour_Hours
+      Scope:
+        ComplianceResourceTypes:
+          - "AWS::Lambda::Function" # Rule is only applicable for Lambda functions
+      Source:
+        Owner: CUSTOM_LAMBDA
+        SourceDetails:
+          - EventSource: aws.config
+            MaximumExecutionFrequency: TwentyFour_Hours
+            MessageType: ScheduledNotification
+        SourceIdentifier: !GetAtt CustomRuleNoDeprecatedRuntimes.Arn
+
+  ##------------- sample functions
 
   # Sample function configured with desired layers and versions
   GoodLambdaFunction:
@@ -96,11 +160,12 @@ Resources:
       Description: Test function
       Architectures:
       - arm64
-      Runtime: python3.10
+      Runtime: nodejs12.x
       Handler: index.handler
       InlineCode: |
-        def handler(event, context):
-          print("Hello, world!")
+        export.handler = async function(event, context) {
+          console.log("Hello world!");
+        }
   
   # Sample function with the wrong version of the desired layer
   BadLambdaFunction2:
