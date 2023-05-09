@@ -16,6 +16,8 @@ To deploy:
 ```
 npm install
 
+cd example
+
 sam build
 
 sam deploy --guided
