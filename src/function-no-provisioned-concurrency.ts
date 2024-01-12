@@ -1,11 +1,9 @@
 /*
  * This Custom Lambda Config rule tests for the presence of 
- * Provisioned Concurrency Configs across all Lambda functions
- * in the region. The rule then deletes the each found Config. 
- * 
- * This function also contains logic to mark the resources as 
- * non-compliant for future remediation. Remove the delete
- * section of code to mark resources for future remediation.
+ * Provisioned Concurrency (PC) Configs across all Lambda functions
+ * in the region. It marks functions with PC configs as non-compliant.
+ * With a small modification (uncomment a code block below) the rule 
+ * can delete the each found PC Config. 
  */
 
 
