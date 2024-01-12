@@ -6,6 +6,7 @@ Rules currently include:
 
 * *Desired Layer Version* - checks that one or more Lambda layers are associated with all Lambda functions. Desired layer ARN(s) can be specified as a rule parameter named `requiredLayerArns`.
 * *No Deprecated Runtimes* - checks that Lambda functions do not use [deprecated runtimes](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy) as documented by AWS. Can specify additional runtimes as deprecated (or not allowed) using a rule parameter named `otherDeprecatedRuntimes`.
+* *No Provisioned Concurrency* - identifies Lambda functions that use [Provisioned Concurrency](https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html) and mark them as non-compliant. 
 
 ## Deployment
 

@@ -70,3 +70,31 @@ Resources:
         EntryPoints:
           - src/function-no-deprecated-runtimes.ts
 
+
+  CustomRuleNoProvisionedConcurrency:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/function-no-provisioned-concurrency.handler
+      Description: Checks compliance with not using provisioned concurrency.
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - config:ListDiscoveredResources
+                - config:PutEvaluations
+                - lambda:ListProvisionedConcurrencyConfigs
+                - lambda:DeleteProvisionedConcurrencyConfig
+              Resource: "*"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "ES2020"
+        Sourcemap: true
+        External:
+          - "@aws-sdk/client-config-service"
+          - "@aws-sdk/client-lambda"
+        EntryPoints:
+          - src/function-no-provisioned-concurrency.ts
+
