@@ -58,10 +58,11 @@ const evaluatePeriodicEvent = async (_: ConfigPeriodicFrequencyEvent, ruleParame
         qualifier = arnWithQualifier.split(':').pop();
 
         // This block deletes the provisioned concurrency configurations.
-        // Remove this block if you prefer to just mark the functions as 
-        // non-compliant for later remediation.
+        // Uncomment it to remove provisioned concurrency immediately 
+        // as part of the rule.
 
         // BEGIN DELETE BLOCK //
+        /*
         const delcmd = new DeleteProvisionedConcurrencyConfigCommand({
           FunctionName: func.resourceName,
           Qualifier: qualifier
@@ -72,6 +73,7 @@ const evaluatePeriodicEvent = async (_: ConfigPeriodicFrequencyEvent, ruleParame
         compliance = ComplianceType.Compliant;
 
         logger.info("Provisioned Concurrency has been removed from " + func.resourceName + ". This resource is now compliant.");
+        */
         // END DELETE BLOCK // 
 
     } else {
