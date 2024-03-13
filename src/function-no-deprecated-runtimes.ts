@@ -14,10 +14,12 @@ const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION });
 // This should ideally be based on an API call to SSM Public Parameters or the Lambda service.
 // Can also specify additional deprecated runtimes with rule parameter `otherDeprecatedRuntimes`
 const DEPRECATED_RUNTIME_IDENTIFIERS = [
+  'python3.7',
   'python3.6',
   'python2.7',
   'dotnetcore2.1',
   'ruby2.5',
+  'nodejs14.x',
   'nodejs10.x',
   'nodejs8.10',
   'nodejs4.3',
